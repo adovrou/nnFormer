@@ -1,15 +1,16 @@
 import os
-from pathlib import Path
-from monai.transforms import ScaleIntensityRanged
-from collections import OrderedDict
-import SimpleITK as sitk
-from batchgenerators.utilities.file_and_folder_operations import *
 import pandas as pd
 import SimpleITK as sitk
 import shutil
 import json
+import SimpleITK as sitk
 
-def convert_data(data: pd.DataFrame, count:int, path_images: Path | str, path_labels: Path | str=None):
+from pathlib import Path
+from monai.transforms import ScaleIntensityRanged
+from batchgenerators.utilities.file_and_folder_operations import *
+from nnformer.dataset_conversion.utils import generate_dataset_json
+
+def convert_data(data: pd.DataFrame, count:int, path_images: Path, path_labels: Path=None):
     mapping = {
         'dataset': [],
         'nodule': [],
@@ -20,7 +21,7 @@ def convert_data(data: pd.DataFrame, count:int, path_images: Path | str, path_la
 
     # read files
     for idx, row in data.iterrows():
-        image = sitk.ReadImage(path_base.joinpath(f"Data/{row['image_path']}"))
+        image = sitk.ReadImage(str(path_base.joinpath(f"Data/{row['image_path']}")))
         image_array = sitk.GetArrayFromImage(image)
 
         # apply normalization to the image
@@ -61,9 +62,9 @@ def convert_data(data: pd.DataFrame, count:int, path_images: Path | str, path_la
         mapping['mask_new_name'].append(mask_new_name)
         print(f"Saving {dataset_name}_{parts_name[-2]} as {parts_name[-1]} with new name image:{image_new_name}, mask:{mask_new_name}!")
 
-        sitk.WriteImage(image_rescaled, path_images.joinpath(image_new_name))
+        sitk.WriteImage(image_rescaled, str(path_images.joinpath(image_new_name)))
         if path_labels is not None:
-            shutil.copy2(source_mask_file, path_labels.joinpath(mask_new_name))
+            shutil.copy2(str(source_mask_file), str(path_labels.joinpath(mask_new_name)))
         count += 1
 
     return mapping, count
@@ -87,8 +88,11 @@ def create_split_json(path_base: Path):
         "val": val_cases
     }]
 
-    with open(Path(path_base).joinpath("splits_final.json"), "w") as f:
-        json.dump(splits, f, indent=4)
+    splits_file = Path(path_base).joinpath("splits_final.pkl")
+    save_pickle(splits, splits_file)
+
+    # with open(Path(path_base).joinpath("splits_final.json"), "w") as f:
+    #     json.dump(splits, f, indent=4)
 
 if __name__ == "__main__":
     # create the directories
@@ -116,19 +120,20 @@ if __name__ == "__main__":
     val_cases = pd.read_csv(path_val)
     test_cases = pd.read_csv(path_test)
 
-    # # convert data (update names and copy data to the new location)
-    count = 0 
-    train_mapping, count = convert_data(train_cases, count, path_imagesTr, path_labelsTr)
-    val_mapping, count = convert_data(val_cases, count, path_imagesTr, path_labelsTr)
-    test_mapping, count = convert_data(test_cases, count, path_imagesTs, path_labelsTs)
+    # # # convert data (update names and copy data to the new location)
+    # count = 0 
+    # train_mapping, count = convert_data(train_cases, count, path_imagesTr, path_labelsTr)
+    # val_mapping, count = convert_data(val_cases, count, path_imagesTr, path_labelsTr)
+    # test_mapping, count = convert_data(test_cases, count, path_imagesTs, path_labelsTs)
 
-    # # save the mapping to a CSV file
-    pd.DataFrame(train_mapping).to_csv(path_base.joinpath('Data/train_nnFormer_mapping.csv'), index=False)
-    pd.DataFrame(val_mapping).to_csv(path_base.joinpath('Data/val_nnFormer_mapping.csv'), index=False)
-    pd.DataFrame(test_mapping).to_csv(path_base.joinpath('Data/test_nnFormer_mapping.csv'), index=False)
+    # # # save the mapping to a CSV file
+    # pd.DataFrame(train_mapping).to_csv(path_base.joinpath('Data/train_nnFormer_mapping.csv'), index=False)
+    # pd.DataFrame(val_mapping).to_csv(path_base.joinpath('Data/val_nnFormer_mapping.csv'), index=False)
+    # pd.DataFrame(test_mapping).to_csv(path_base.joinpath('Data/test_nnFormer_mapping.csv'), index=False)
 
+    ## generate dataset.json
 
-    generate_dataset_json(output_file=path_dataset,
+    generate_dataset_json(output_file=str(Path(path_dataset).joinpath("dataset.json")),
                           imagesTr_dir=path_imagesTr,
                           imagesTs_dir=path_imagesTs,
                           modalities={0: 'noNorm'},
@@ -136,8 +141,10 @@ if __name__ == "__main__":
                               'background': 0,
                               'lung_nodule': 1
                           },
+                          dataset_name="LungNodule",
                           license='MIT',
                           )
     
+    # create splits_final.pkl 
     create_split_json(path_dataset)
 
