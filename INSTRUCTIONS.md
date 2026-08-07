@@ -61,7 +61,7 @@ nnFormer_results/
 
 ```
 
-- Create splits_final.json
+- Create splits_final.pkl
 
 ```
 [
@@ -92,7 +92,7 @@ nnFormer_plan_and_preprocess -t 1 -pl2d None --verify_dataset_integrity
 
 Train model
 
-> CUDA_VISIBLE_DEVICES=0 nnFormer_train 3d_fullres nnFormerTrainerV2 Task001_LungNodule 0
+> CUDA_VISIBLE_DEVICES=0 nnFormer_train 3d_fullres nnFormerTrainerV2_nnformer_lungNodule Task001_LungNodule 0
 
 
 ### Step 4
