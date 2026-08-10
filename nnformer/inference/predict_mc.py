@@ -215,7 +215,7 @@ def predict_cases_mc(model, list_of_lists, output_filenames, folds, save_npz, nu
             for i in range(num_preds):
                 for j in range(i + 1, num_preds):  
                     # Quick debug print to confirm they are identical
-                    print(f"Are masks {i} and {j} exactly identical? {np.array_equal(all_mc_segs[i], all_mc_segs[j])}")
+                    # print(f"Are masks {i} and {j} exactly identical? {np.array_equal(all_mc_segs[i], all_mc_segs[j])}")
 
                     dice = compute_dice(all_mc_segs[i], all_mc_segs[j], num_classes)
                     pairwise_dscs.append(dice)

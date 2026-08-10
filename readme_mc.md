@@ -7,7 +7,7 @@ This repository supports running inference with Monte Carlo (MC) dropout to capt
 You can run the script similar to standard nnFormer inference, but with additional arguments specifically for configuring MC dropout.
 
 ```bash
-python -m nnformer.inference.predict_mc -i <input_folder> -o <output_folder> -t <task_name_or_id> -m <model> [MC_ARGS]
+python -m nnformer.inference.predict_mc -i <input_folder> -o <output_folder> -t <task_name_or_id> -m <model> -f <fold> -tr <trainer> [MC_ARGS]
 ```
 
 ### Example Command
@@ -15,7 +15,7 @@ python -m nnformer.inference.predict_mc -i <input_folder> -o <output_folder> -t 
 Based on standard inference, to run MC predictions on test images:
 
 ```bash
-CUDA_VISIBLE_DEVICES=0 python -m nnformer.inference.predict_mc -i imagesTs -o pred_nnFormer_test_mc -m 3d_fullres -t Task001_LungNodule -f 0 -mc_samples 10 -dropout_prob 0.1
+CUDA_VISIBLE_DEVICES=0 python -m nnformer.inference.predict_mc -i imagesTs -o pred_nnFormer_test_mc -m 3d_fullres -t Task001_LungNodule -f 0 -tr nnFormerTrainerV2_nnformer_lungNodule -mc_samples 10 -dropout_prob 0.2
 ```
 
 ### MC-Specific Arguments
