@@ -105,3 +105,9 @@ CUDA_VISIBLE_DEVICES=0 nnFormer_predict -i INPUT_FOLDER -o OUTPUT_FOLDER -m CONF
 CUDA_VISIBLE_DEVICES=0 nnFormer_predict -i imagesTs -o pred_nnFormer_test -m 3d_fullres -t Task001_LungNodule -f 0
 
 ```
+
+If you train your model with your own custom trainer using your own data, then pass the custom trainer class name using -tr (or --trainer_class_name) argument:
+
+```
+CUDA_VISIBLE_DEVICES=0 nnFormer_predict -i imagesTs -o pred_nnFormer_test -m 3d_fullres -t Task001_LungNodule -f 0 -tr nnFormerTrainerV2_nnformer_lungNodule
+```
