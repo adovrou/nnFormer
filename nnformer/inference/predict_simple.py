@@ -31,6 +31,7 @@ def main():
                                                      "CASENAME_XXXX.nii.gz where XXXX is the modality "
                                                      "identifier (0000, 0001, etc)", required=True)
     parser.add_argument('-o', "--output_folder", required=True, help="folder for saving predictions")
+    parser.add_argument('-o_prob', "--prob_output_folder", required=False, default=None, help="folder for saving probability maps")
     parser.add_argument('-t', '--task_name', help='task name or task ID, required.',
                         default=default_plans_identifier, required=True)
 
@@ -127,6 +128,7 @@ def main():
     args = parser.parse_args()
     input_folder = args.input_folder
     output_folder = args.output_folder
+    prob_output_folder = args.prob_output_folder
     part_id = args.part_id
     num_parts = args.num_parts
     folds = args.folds
@@ -201,7 +203,7 @@ def main():
                             num_threads_preprocessing, num_threads_nifti_save, None, part_id, num_parts, not disable_tta,
                             overwrite_existing=overwrite_existing, mode=mode, overwrite_all_in_gpu=all_in_gpu,
                             mixed_precision=not args.disable_mixed_precision,
-                            step_size=step_size)
+                            step_size=step_size, prob_output_folder=prob_output_folder)
         lowres_segmentations = lowres_output_folder
         torch.cuda.empty_cache()
         print("3d_lowres done")
@@ -230,7 +232,7 @@ def main():
                         num_threads_nifti_save, lowres_segmentations, part_id, num_parts, not disable_tta,
                         overwrite_existing=overwrite_existing, mode=mode, overwrite_all_in_gpu=all_in_gpu,
                         mixed_precision=not args.disable_mixed_precision,
-                        step_size=step_size, checkpoint_name=args.chk)
+                        step_size=step_size, checkpoint_name=args.chk, prob_output_folder=prob_output_folder)
 
 
 if __name__ == "__main__":

@@ -30,7 +30,7 @@ def save_segmentation_nifti_from_softmax(segmentation_softmax: Union[str, np.nda
                                          seg_postprogess_fn: callable = None, seg_postprocess_args: tuple = None,
                                          resampled_npz_fname: str = None,
                                          non_postprocessed_fname: str = None, force_separate_z: bool = None,
-                                         interpolation_order_z: int = 0, verbose: bool = True):
+                                         interpolation_order_z: int = 0, verbose: bool = True, prob_output_fname: str = None):
     """
     This is a utility for writing segmentations to nifto and npz. It requires the data to have been preprocessed by
     GenericPreprocessor because it depends on the property dictionary output (dct) to know the geometry of the original
@@ -116,6 +116,11 @@ def save_segmentation_nifti_from_softmax(segmentation_softmax: Union[str, np.nda
             properties_dict['regions_class_order'] = region_class_order
         save_pickle(properties_dict, resampled_npz_fname[:-4] + ".pkl")
 
+    if prob_output_fname is not None:
+        prob_map_foreground = seg_old_spacing[1]
+    else:
+        prob_map_foreground = None
+
     if region_class_order is None:
         seg_old_spacing = seg_old_spacing.argmax(0)
     else:
@@ -146,6 +151,23 @@ def save_segmentation_nifti_from_softmax(segmentation_softmax: Union[str, np.nda
     seg_resized_itk.SetOrigin(properties_dict['itk_origin'])
     seg_resized_itk.SetDirection(properties_dict['itk_direction'])
     sitk.WriteImage(seg_resized_itk, out_fname)
+
+    if prob_output_fname is not None and prob_map_foreground is not None:
+        if bbox is not None:
+            prob_old_size = np.zeros(shape_original_before_cropping)
+            for c in range(3):
+                bbox[c][1] = np.min((bbox[c][0] + prob_map_foreground.shape[c], shape_original_before_cropping[c]))
+            prob_old_size[bbox[0][0]:bbox[0][1],
+            bbox[1][0]:bbox[1][1],
+            bbox[2][0]:bbox[2][1]] = prob_map_foreground
+        else:
+            prob_old_size = prob_map_foreground
+
+        prob_itk = sitk.GetImageFromArray(prob_old_size.astype(np.float32))
+        prob_itk.SetSpacing(properties_dict['itk_spacing'])
+        prob_itk.SetOrigin(properties_dict['itk_origin'])
+        prob_itk.SetDirection(properties_dict['itk_direction'])
+        sitk.WriteImage(prob_itk, prob_output_fname)
 
     if (non_postprocessed_fname is not None) and (seg_postprogess_fn is not None):
         seg_resized_itk = sitk.GetImageFromArray(seg_old_size.astype(np.uint8))

@@ -133,7 +133,7 @@ def preprocess_multithreaded(trainer, list_of_lists, output_files, num_processes
 def predict_cases(model, list_of_lists, output_filenames, folds, save_npz, num_threads_preprocessing,
                   num_threads_nifti_save, segs_from_prev_stage=None, do_tta=True, mixed_precision=True, overwrite_existing=False,
                   all_in_gpu=False, step_size=0.5, checkpoint_name="model_final_checkpoint",
-                  segmentation_export_kwargs: dict = None):
+                  segmentation_export_kwargs: dict = None, prob_output_folder: str = None):
     """
     :param segmentation_export_kwargs:
     :param model: folder where the model is saved, must contain fold_x subfolders
@@ -254,10 +254,15 @@ def predict_cases(model, list_of_lists, output_filenames, folds, save_npz, num_t
             np.save(output_filename[:-7] + ".npy", softmax_mean)
             softmax_mean = output_filename[:-7] + ".npy"
 
+        if prob_output_folder is not None:
+            prob_output_fname = join(prob_output_folder, os.path.basename(output_filename))
+        else:
+            prob_output_fname = None
+
         results.append(pool.starmap_async(save_segmentation_nifti_from_softmax,
                                           ((softmax_mean, output_filename, dct, interpolation_order, region_class_order,
                                             None, None,
-                                            npz_file, None, force_separate_z, interpolation_order_z),)
+                                            npz_file, None, force_separate_z, interpolation_order_z, True, prob_output_fname),)
                                           ))
 
     print("inference done. Now waiting for the segmentation export to finish...")
@@ -582,7 +587,7 @@ def predict_from_folder(model: str, input_folder: str, output_folder: str, folds
                         part_id: int, num_parts: int, tta: bool, mixed_precision: bool = True,
                         overwrite_existing: bool = True, mode: str = 'normal', overwrite_all_in_gpu: bool = None,
                         step_size: float = 0.5, checkpoint_name: str = "model_final_checkpoint",
-                        segmentation_export_kwargs: dict = None):
+                        segmentation_export_kwargs: dict = None, prob_output_folder: str = None):
     """
         here we use the standard naming scheme to generate list_of_lists and output_files needed by predict_cases
 
@@ -630,11 +635,14 @@ def predict_from_folder(model: str, input_folder: str, output_folder: str, folds
         else:
             all_in_gpu = overwrite_all_in_gpu
 
+        if prob_output_folder is not None:
+            maybe_mkdir_p(prob_output_folder)
+
         return predict_cases(model, list_of_lists[part_id::num_parts], output_files[part_id::num_parts], folds,
                              save_npz, num_threads_preprocessing, num_threads_nifti_save, lowres_segmentations, tta,
                              mixed_precision=mixed_precision, overwrite_existing=overwrite_existing, all_in_gpu=all_in_gpu,
                              step_size=step_size, checkpoint_name=checkpoint_name,
-                             segmentation_export_kwargs=segmentation_export_kwargs)
+                             segmentation_export_kwargs=segmentation_export_kwargs, prob_output_folder=prob_output_folder)
     elif mode == "fast":
         if overwrite_all_in_gpu is None:
             all_in_gpu = True
@@ -669,6 +677,7 @@ if __name__ == "__main__":
                                                      "CASENAME_XXXX.nii.gz where XXXX is the modality "
                                                      "identifier (0000, 0001, etc)", required=True)
     parser.add_argument('-o', "--output_folder", required=True, help="folder for saving predictions")
+    parser.add_argument('-o_prob', "--prob_output_folder", required=False, default=None, help="folder for saving probability maps")
     parser.add_argument('-m', '--model_output_folder',
                         help='model output folder. Will automatically discover the folds '
                              'that were '
@@ -737,6 +746,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     input_folder = args.input_folder
     output_folder = args.output_folder
+    prob_output_folder = args.prob_output_folder
     part_id = args.part_id
     num_parts = args.num_parts
     model = args.model_output_folder

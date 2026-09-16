@@ -111,3 +111,11 @@ If you train your model with your own custom trainer using your own data, then p
 ```
 CUDA_VISIBLE_DEVICES=0 nnFormer_predict -i imagesTs -o pred_nnFormer_test -m 3d_fullres -t Task001_LungNodule -f 0 -tr nnFormerTrainerV2_nnformer_lungNodule
 ```
+
+### Save probability maps
+
+To save probability maps, you can run an inference command like: 
+
+```
+CUDA_VISIBLE_DEVICES=0 nnFormer_predict -i imagesTs -o pred_nnFormer_test -o_prob pred_nnFormer_test_prob -m 3d_fullres -t Task001_LungNodule -f 0 -tr nnFormerTrainerV2_nnformer_lungNodule
+```

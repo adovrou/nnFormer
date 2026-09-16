@@ -85,7 +85,7 @@ def predict_cases_mc(model, list_of_lists, output_filenames, folds, save_npz, nu
                      num_threads_nifti_save, segs_from_prev_stage=None, do_tta=True, mixed_precision=True,
                      overwrite_existing=False, all_in_gpu=False, step_size=0.5, checkpoint_name="model_final_checkpoint",
                      segmentation_export_kwargs: dict = None, mc_samples=10, dropout_prob=0.1, disable_uncertainty=False,
-                     uncertainty_metrics=None):
+                     uncertainty_metrics=None, prob_output_folder: str = None):
     assert len(list_of_lists) == len(output_filenames)
     if segs_from_prev_stage is not None: assert len(segs_from_prev_stage) == len(output_filenames)
 
@@ -254,10 +254,15 @@ def predict_cases_mc(model, list_of_lists, output_filenames, folds, save_npz, nu
         else:
             npz_file = None
 
+        if prob_output_folder is not None:
+            prob_output_fname = join(prob_output_folder, os.path.basename(output_filename))
+        else:
+            prob_output_fname = None
+
         results.append(pool.starmap_async(save_segmentation_nifti_from_softmax,
                                           ((softmax_mean, output_filename, dct, interpolation_order, region_class_order,
                                             None, None,
-                                            npz_file, None, force_separate_z, interpolation_order_z),)
+                                            npz_file, None, force_separate_z, interpolation_order_z, True, prob_output_fname),)
                                           ))
 
     print("inference done. Now waiting for the segmentation export to finish...")
@@ -287,7 +292,7 @@ def predict_from_folder_mc(model: str, input_folder: str, output_folder: str, fo
                            overwrite_existing: bool = True, mode: str = 'normal', overwrite_all_in_gpu: bool = None,
                            step_size: float = 0.5, checkpoint_name: str = "model_final_checkpoint",
                            segmentation_export_kwargs: dict = None, mc_samples: int = 10, dropout_prob: float = 0.2,
-                           disable_uncertainty: bool = False, uncertainty_metrics: list = None):
+                           disable_uncertainty: bool = False, uncertainty_metrics: list = None, prob_output_folder: str = None):
     
     maybe_mkdir_p(output_folder)
     shutil.copy(join(model, 'plans.pkl'), output_folder)
@@ -321,13 +326,14 @@ def predict_from_folder_mc(model: str, input_folder: str, output_folder: str, fo
                             step_size=step_size, checkpoint_name=checkpoint_name,
                             segmentation_export_kwargs=segmentation_export_kwargs,
                             mc_samples=mc_samples, dropout_prob=dropout_prob, 
-                            disable_uncertainty=disable_uncertainty, uncertainty_metrics=uncertainty_metrics)
+                            disable_uncertainty=disable_uncertainty, uncertainty_metrics=uncertainty_metrics, prob_output_folder=prob_output_folder)
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-i", '--input_folder', help="Must contain all modalities for each patient in the correct order", required=True)
     parser.add_argument('-o', "--output_folder", required=True, help="folder for saving predictions")
+    parser.add_argument('-o_prob', "--prob_output_folder", required=False, default=None, help="folder for saving probability maps")
     parser.add_argument('-t', '--task_name', help='task name or task ID, required.', default=default_plans_identifier, required=True)
     parser.add_argument('-tr', '--trainer_class_name', help='Name of the nnFormerTrainer used for 2D U-Net, full resolution 3D U-Net and low resolution U-Net. The default is %s.' % default_trainer, required=False, default=default_trainer)
     parser.add_argument('-ctr', '--cascade_trainer_class_name', help="Trainer class name used for predicting the 3D full resolution U-Net part of the cascade. Default is %s" % default_cascade_trainer, required=False, default=default_cascade_trainer)
@@ -357,6 +363,7 @@ def main():
     args = parser.parse_args()
     input_folder = args.input_folder
     output_folder = args.output_folder
+    prob_output_folder = args.prob_output_folder
     part_id = args.part_id
     num_parts = args.num_parts
     folds = args.folds
@@ -418,7 +425,7 @@ def main():
                            overwrite_existing=overwrite_existing, mode=mode, overwrite_all_in_gpu=all_in_gpu,
                            mixed_precision=not args.disable_mixed_precision, step_size=step_size, checkpoint_name=args.chk,
                            mc_samples=args.mc_samples, dropout_prob=args.dropout_prob,
-                           disable_uncertainty=args.disable_uncertainty, uncertainty_metrics=args.uncertainty_metrics)
+                           disable_uncertainty=args.disable_uncertainty, uncertainty_metrics=args.uncertainty_metrics, prob_output_folder=prob_output_folder)
 
 if __name__ == "__main__":
     main()
