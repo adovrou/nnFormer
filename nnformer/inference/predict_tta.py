@@ -24,6 +24,9 @@ try:
 except ImportError:
     MetaTensor = None
 
+import monai
+monai.utils.set_determinism(seed=42)
+
 # Compatibility shim for batchgenerators >= 0.25 in modern Python environments
 import pkgutil
 import importlib
@@ -545,8 +548,18 @@ def main():
                         help="Metrics to output: variance, entropy, or all. Default: variance entropy")
     parser.add_argument("-disable_uncertainty", action="store_true",
                         help="If set, uncertainty maps will not be computed or saved")
+    parser.add_argument("-gpu", "--gpu_id", type=str, default=None,
+                        help="GPU device ID to use (e.g. 0 or 1). Sets CUDA_VISIBLE_DEVICES.")
 
     args = parser.parse_args()
+
+    if args.gpu_id is not None:
+        os.environ["CUDA_VISIBLE_DEVICES"] = str(args.gpu_id)
+        if torch.cuda.is_available():
+            try:
+                torch.cuda.set_device(0)
+            except Exception:
+                pass
     input_folder = args.input_folder
     output_folder = args.output_folder
     prob_output_folder = args.prob_output_folder
